@@ -1,11 +1,12 @@
--module (p15).
--export ([replicate/2]).
+-module(p15).
+-export([replicate/2]).
 
-replicate(List, N) ->
-    Res = p05:reverse(replicate(List, N, [])),
-    p13:decode(Res).
+replicate(List, Num) ->
+  p05:reverse(replicate(List, Num, Num, [])).
 
-replicate([], _, Acc) ->
-  Acc;
-replicate([H|T], N, Acc) ->
-  replicate(T, N, [{N, H}|Acc]).
+replicate([_|T], Num, 0, Acc) ->
+  replicate(T, Num, Num, Acc);
+replicate([H|T], Num, N, Acc) ->
+  replicate([H|T], Num, N-1, [H|Acc]);
+replicate([], _, _, Acc) ->
+  Acc.

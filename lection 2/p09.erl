@@ -1,5 +1,5 @@
--module (p09).
--export ([pack/1]).
+-module(p09).
+-export([pack/1]).
 
 pack(List) ->
   p05:reverse(pack(List, [])).

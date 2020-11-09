@@ -1,5 +1,5 @@
--module (p14).
--export ([duplicate/1]).
+-module(p14).
+-export([duplicate/1]).
 
 duplicate(List) ->
   Res = duplicate(List, []),

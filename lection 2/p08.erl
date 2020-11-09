@@ -1,5 +1,5 @@
--module (p08).
--export ([compress/1]).
+-module(p08).
+-export([compress/1]).
 
 compress(List) ->
   Res = compress(List, []),

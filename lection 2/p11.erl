@@ -1,5 +1,5 @@
--module (p11).
--export ([encode_modified/1]).
+-module(p11).
+-export([encode_modified/1]).
 
 encode_modified(List) ->
   p05:reverse(encode_modified(List, [])).

@@ -1,5 +1,5 @@
--module (p01).
--export ([last/1]).
+-module(p01).
+-export([last/1]).
 
 last([H|[]]) ->
   H;

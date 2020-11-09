@@ -1,5 +1,5 @@
--module (p07).
--export ([flatten/1]).
+-module(p07).
+-export([flatten/1]).
 
 flatten(List) ->
   flatten(List, []).

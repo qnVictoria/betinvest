@@ -1,5 +1,5 @@
--module (p12).
--export ([decode_modified/1]).
+-module(p12).
+-export([decode_modified/1]).
 
 decode_modified(List) ->
   p05:reverse(decode_modified(List, [])).

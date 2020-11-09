@@ -1,5 +1,5 @@
--module (p02).
--export ([but_last/1]).
+-module(p02).
+-export([but_last/1]).
 
 but_last([X, Y]) ->
   [X, Y];

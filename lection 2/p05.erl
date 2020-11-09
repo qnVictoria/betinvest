@@ -1,5 +1,5 @@
--module (p05).
--export ([reverse/1]).
+-module(p05).
+-export([reverse/1]).
 
 reverse(List) ->
   reverse(List, []).

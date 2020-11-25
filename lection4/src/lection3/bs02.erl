@@ -6,6 +6,8 @@ words(X) ->
 
 words(<<>>, Acc) ->
   Acc;
+words(<<" ", Y/utf8, Rest/binary>>, Acc) when Y == 32 ->
+  words(<<Y/utf8, Rest/binary>>, Acc);
 words(<<" ", Y/utf8, Rest/binary>>, Acc) ->
   words(Rest, [<<Y/utf8>>|Acc]);
 words(<<X/utf8, Rest/binary>>, [H|T]) ->

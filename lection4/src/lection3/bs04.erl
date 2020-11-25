@@ -3,7 +3,7 @@
 
 % Json = <<"
 % {
-%   'squadName': 'Super hero squad',
+%   'squadName': 'Super, hero, squad',
 %   'homeTown': 'Metro City',
 %   'formed': 2016,
 %   'secretBase': 'Super tower',
@@ -30,7 +30,7 @@
 %       ]
 %     },
 %     {
-%       'name': 'Eternal Flame',
+%       'name': 'Eternal, Flame',
 %       'age': 1000000,
 %       'secretIdentity': 'Unknown',
 %       'powers': [
@@ -69,51 +69,59 @@ json_trimmer(<<X/utf8, Rest/binary>>, Value, Acc) ->
   json_trimmer(Rest, Value, <<Acc/binary, X/utf8>>).
 
 to_proplist(Json) ->
-  to_proplist(Json, [{<<>>, <<>>}]).
+  to_proplist(Json, outside, [{<<>>, <<>>}]).
 
-to_proplist(<<"}">>, [{Key, Value}|Tail]) ->
+to_proplist(<<"}">>, _, [{Key, Value}|Tail]) ->
   lists:reverse([{bin_to_term(Key), bin_to_term(Value)}|Tail]);
-to_proplist(<<"{", Rest/binary>>, [{<<>>, <<>>}] = Acc) ->
-  to_proplist(Rest, Acc);
-to_proplist(<<"'", Rest/binary>>, Acc) ->
-  to_proplist(Rest, Acc);
-to_proplist(<<",", Rest/binary>>, [{Key, Value}|Tail]) ->
-  to_proplist(Rest, [{<<>>, <<>>}, {bin_to_term(Key), bin_to_term(Value)}|Tail]);
-to_proplist(<<":", Rest/binary>>, [{<<>>, Value}|Tail]) ->
-  to_proplist(Rest, [{Value, <<>>}|Tail]);
-to_proplist(<<"{", Rest/binary>>, [{Key, _}|Tail]) ->
+to_proplist(<<"{", Rest/binary>>, State, [{<<>>, <<>>}] = Acc) ->
+  to_proplist(Rest, State, Acc);
+to_proplist(<<"'", Rest/binary>>, inside, Acc) ->
+  to_proplist(Rest, outside, Acc);
+to_proplist(<<"'", Rest/binary>>, outside, Acc) ->
+  to_proplist(Rest, inside, Acc);
+to_proplist(<<",", Rest/binary>>, outside, [{Key, Value}|Tail]) ->
+  to_proplist(Rest, outside, [{<<>>, <<>>}, {bin_to_term(Key), bin_to_term(Value)}|Tail]);
+to_proplist(<<",", Rest/binary>>, inside, [{Key, Value}|Tail]) ->
+  to_proplist(Rest, inside, [{Key, <<Value/binary, ",">>}|Tail]);
+to_proplist(<<":", Rest/binary>>, State, [{<<>>, Value}|Tail]) ->
+  to_proplist(Rest, State, [{Value, <<>>}|Tail]);
+to_proplist(<<"{", Rest/binary>>, State, [{Key, _}|Tail]) ->
   {InnerJson, OuterText} = split_json(Rest, 1, <<>>),
-	to_proplist(OuterText, [{Key, to_proplist(InnerJson, [{<<>>,<<>>}])}|Tail]);
-to_proplist(<<"[", Rest/binary>>, [{Key, _}|Tail]) ->
+	to_proplist(OuterText, State, [{Key, to_proplist(InnerJson, State, [{<<>>,<<>>}])}|Tail]);
+to_proplist(<<"[", Rest/binary>>, State, [{Key, _}|Tail]) ->
 	{InnerList, OuterText} = split_list(Rest, 1, <<>>, []),
-	to_proplist(OuterText, [{Key, lists:reverse([to_proplist(X, [{<<>>,<<>>}]) || X <- InnerList])}|Tail]);
-to_proplist(<<X/utf8, Rest/binary>>, [{Key, Value}|Tail]) ->
-	to_proplist(Rest, [{Key, <<Value/binary, X/utf8>>}|Tail]);
-to_proplist(<<>>, [{<<>>,Value}|_]) ->
+	to_proplist(OuterText, State, [{Key, lists:reverse([to_proplist(X, State, [{<<>>,<<>>}]) || X <- InnerList])}|Tail]);
+to_proplist(<<X/utf8, Rest/binary>>, State, [{Key, Value}|Tail]) ->
+	to_proplist(Rest, State, [{Key, <<Value/binary, X/utf8>>}|Tail]);
+to_proplist(<<>>, _, [{<<>>,Value}|_]) ->
   bin_to_term(Value).
 
 to_map(Json) ->
-  to_map(Json, {<<>>, <<>>}, #{}).
+  to_map(Json, outside, {<<>>, <<>>}, #{}).
 
-to_map(<<"}">>, {Key, Value}, Acc) ->
+to_map(<<"}">>, _, {Key, Value}, Acc) ->
 	maps:put(bin_to_term(Key), bin_to_term(Value), Acc);
-to_map(<<"{", Rest/binary>>, {<<>>, <<>>}, #{}) ->
-	to_map(Rest, {<<>>, <<>>}, #{});
-to_map(<<"'", Rest/binary>>, Tuple, Acc) ->
-  to_map(Rest, Tuple, Acc);
-to_map(<<",", Rest/binary>>, {Key, Value}, Acc) ->
-	to_map(Rest, {<<>>, <<>>}, maps:put(bin_to_term(Key), bin_to_term(Value), Acc));
-to_map(<<":", Rest/binary>>, {<<>>, Value}, Acc) ->
-	to_map(Rest, {Value, <<>>}, Acc);
-to_map(<<"{", Rest/binary>>, {Key, _}, Acc) ->
+to_map(<<"{", Rest/binary>>, State, {<<>>, <<>>}, #{}) ->
+	to_map(Rest, State, {<<>>, <<>>}, #{});
+to_map(<<"'", Rest/binary>>, inside, Tuple, Acc) ->
+  to_map(Rest, outside, Tuple, Acc);
+to_map(<<"'", Rest/binary>>, outside, Tuple, Acc) ->
+  to_map(Rest, inside, Tuple, Acc);
+to_map(<<",", Rest/binary>>, outside, {Key, Value}, Acc) ->
+	to_map(Rest, outside, {<<>>, <<>>}, maps:put(bin_to_term(Key), bin_to_term(Value), Acc));
+to_map(<<",", Rest/binary>>, inside, {Key, Value}, Acc) ->
+  to_map(Rest, inside, {Key, <<Value/binary, ",">>}, Acc);
+to_map(<<":", Rest/binary>>, State, {<<>>, Value}, Acc) ->
+	to_map(Rest, State, {Value, <<>>}, Acc);
+to_map(<<"{", Rest/binary>>, State, {Key, _}, Acc) ->
 	{InnerJson, OuterText} = split_json(Rest, 1, <<>>),
-	to_map(OuterText, {Key, to_map(InnerJson, {<<>>, <<>>}, #{})}, Acc);
-to_map(<<"[", Rest/binary>>, {Key, _}, Acc) ->
+	to_map(OuterText, State, {Key, to_map(InnerJson, State, {<<>>, <<>>}, #{})}, Acc);
+to_map(<<"[", Rest/binary>>, State, {Key, _}, Acc) ->
 	{InnerList, OuterText} = split_list(Rest, 1, <<>>, []),
-	to_map(OuterText, {Key, lists:reverse([to_map(X, {<<>>, <<>>}, #{}) || X <- InnerList])}, Acc);
-to_map(<<X/utf8, RestText/binary>>, {Key, Value}, Acc) ->
-	to_map(RestText, {Key, <<Value/binary, X/utf8>>}, Acc);
-to_map(<<>>, {<<>>, Value}, #{}) ->
+	to_map(OuterText, State, {Key, lists:reverse([to_map(X, State, {<<>>, <<>>}, #{}) || X <- InnerList])}, Acc);
+to_map(<<X/utf8, Rest/binary>>, State, {Key, Value}, Acc) ->
+	to_map(Rest, State, {Key, <<Value/binary, X/utf8>>}, Acc);
+to_map(<<>>, _, {<<>>, Value}, #{}) ->
 	bin_to_term(Value).
 
 split_json(<<"}", Rest/binary>>, 1, Acc) ->
